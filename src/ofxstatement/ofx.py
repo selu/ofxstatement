@@ -3,12 +3,12 @@ from xml.etree import ElementTree as etree
 
 
 class OfxWriter(object):
-    statement = None
+    statements = None
     tb = None
     genTime = None
 
-    def __init__(self, statement):
-        self.statement = statement
+    def __init__(self, statements):
+        self.statements = statements
         self.genTime = datetime.now()
 
     def toxml(self):
@@ -36,7 +36,7 @@ class OfxWriter(object):
 
         self.buildSignon()
 
-        self.buildTransactionList()
+        self.buildMessage()
 
         tb.end("OFX")
         return etree.ElementTree(tb.close())
@@ -56,9 +56,17 @@ class OfxWriter(object):
         tb.end("SONRS")
         tb.end("SIGNONMSGSRSV1")
 
-    def buildTransactionList(self):
+    def buildMessage(self):
         tb = self.tb
         tb.start("BANKMSGSRSV1", {})
+        for statement in self.statements:
+            self.buildTransactionList(statement)
+
+        tb.end("BANKMSGSRSV1")
+
+
+    def buildTransactionList(self, statement):
+        tb = self.tb
         tb.start("STMTTRNRS", {})
 
         self.buildText("TRNUID", "0")
@@ -68,30 +76,29 @@ class OfxWriter(object):
         tb.end("STATUS")
 
         tb.start("STMTRS", {})
-        self.buildText("CURDEF", self.statement.currency)
+        self.buildText("CURDEF", statement.currency)
         tb.start("BANKACCTFROM", {})
-        self.buildText("BANKID", self.statement.bank_id, False)
-        self.buildText("ACCTID", self.statement.account_id, False)
-        self.buildText("ACCTTYPE", self.statement.account_type)
+        self.buildText("BANKID", statement.bank_id, False)
+        self.buildText("ACCTID", statement.account_id, False)
+        self.buildText("ACCTTYPE", statement.account_type)
         tb.end("BANKACCTFROM")
 
         tb.start("BANKTRANLIST", {})
-        self.buildDate("DTSTART", self.statement.start_date, False)
-        self.buildDate("DTEND", self.statement.end_date, False)
+        self.buildDate("DTSTART", statement.start_date, False)
+        self.buildDate("DTEND", statement.end_date, False)
 
-        for line in self.statement.lines:
+        for line in statement.lines:
             self.buildTransaction(line)
 
         tb.end("BANKTRANLIST")
 
         tb.start("LEDGERBAL", {})
-        self.buildAmount("BALAMT", self.statement.end_balance, False)
-        self.buildDateTime("DTASOF", self.statement.end_date, False)
+        self.buildAmount("BALAMT", statement.end_balance, False)
+        self.buildDateTime("DTASOF", statement.end_date, False)
         tb.end("LEDGERBAL")
 
         tb.end("STMTRS")
         tb.end("STMTTRNRS")
-        tb.end("BANKMSGSRSV1")
 
     def buildTransaction(self, line):
         tb = self.tb

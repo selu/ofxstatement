@@ -146,20 +146,23 @@ def convert(args):
     # process the input and produce output
     parser = p.get_parser(args.input)
     try:
-        statement = parser.parse()
+        statements = parser.parse()
+        if isscalar(statements):
+            statements = [statements]
     except exceptions.ParseError as e:
         log.error("Parse error on line %s: %s" % (e.lineno, e.message))
         return 2  # parse error
 
-    # Validate the statement
+    # Validate the statements
     try:
-        statement.assert_valid()
+        for statement in statements:
+            statement.assert_valid()
     except exceptions.ValidationError as e:
         log.error("Statement validation error: %s" % (e.message))
         return 2 # Validation error
 
     with smart_open(args.output) as out:
-        writer = ofx.OfxWriter(statement)
+        writer = ofx.OfxWriter(statements)
         out.write(writer.toxml())
 
     log.info("Conversion completed: %s" % args.input)
