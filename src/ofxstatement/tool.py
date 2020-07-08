@@ -147,7 +147,7 @@ def convert(args):
     parser = p.get_parser(args.input)
     try:
         statements = parser.parse()
-        if isscalar(statements):
+        if not isinstance(statements,list):
             statements = [statements]
     except exceptions.ParseError as e:
         log.error("Parse error on line %s: %s" % (e.lineno, e.message))
